@@ -1,0 +1,22 @@
+[project]
+name = "apidog-rescue"
+version = "0.1.0"
+description = "Recover lost API collections from ApiDog local data and export to Postman or Bruno"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+keywords = ["apidog", "postman", "bruno", "recovery", "api"]
+dependencies = [
+    "pyyaml>=6.0",
+    "rich>=13.0",
+]
+
+[project.scripts]
+apidog-rescue = "apidog_rescue.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["apidog_rescue"]
