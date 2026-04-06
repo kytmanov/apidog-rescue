@@ -1,4 +1,4 @@
-"""Export api_item dicts to Postman Collection v2.1 JSON."""
+"""Export api_item dicts and environments to Postman format."""
 
 import json
 import uuid
@@ -128,5 +128,42 @@ def export_postman(
     out_path = output_dir / f"{safe_name}.postman_collection.json"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(collection, f, indent=2, ensure_ascii=False)
+
+    return out_path
+
+
+def export_environment_postman(env: dict, output_dir: Path) -> Path:
+    """
+    Write a Postman environment JSON file from an ApiDog environment dict.
+    Uses initialValue as the value (current session values are often empty/expired).
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    env_id = env.get("id", "unknown")
+    variables = env.get("variables") or []
+
+    values = []
+    for var in variables:
+        name = var.get("name", "")
+        # Prefer initialValue when value is empty (tokens expire; initial values are stable config)
+        value = var.get("value") or var.get("initialValue") or ""
+        secret = var.get("securityType") == "secret"
+        values.append({
+            "key": name,
+            "value": value,
+            "enabled": True,
+            "type": "secret" if secret else "default",
+        })
+
+    postman_env = {
+        "id": str(uuid.uuid4()),
+        "name": f"environment-{env_id}",
+        "values": values,
+        "_postman_variable_scope": "environment",
+    }
+
+    out_path = output_dir / f"environment-{env_id}.postman_environment.json"
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(postman_env, f, indent=2, ensure_ascii=False)
 
     return out_path

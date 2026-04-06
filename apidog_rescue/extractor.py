@@ -10,6 +10,54 @@ import yaml
 
 
 # ---------------------------------------------------------------------------
+# Environment extraction
+# ---------------------------------------------------------------------------
+
+_ENV_RE = re.compile(
+    r'\{"id":\d+,"projectId":\d+,"variables":\[.{0,10000}?\]'
+    r'\s*,"parameters":\{[^{}]*\}\s*\}'
+)
+
+
+def extract_environments(apidog_dir: Path) -> list[dict]:
+    """
+    Scan Local Storage and IndexedDB LevelDB files for ApiDog environment objects.
+    Returns a list of raw environment dicts with id, projectId, variables.
+    """
+    search_dirs = [
+        apidog_dir / "Local Storage" / "leveldb",
+        apidog_dir / "IndexedDB" / "file__0.indexeddb.leveldb",
+    ]
+
+    seen_ids: set[int] = set()
+    results: list[dict] = []
+
+    for ldb_dir in search_dirs:
+        if not ldb_dir.exists():
+            continue
+        for ldb_file in sorted(ldb_dir.iterdir()):
+            if ldb_file.suffix not in (".ldb", ".log"):
+                continue
+            try:
+                raw = ldb_file.read_bytes()
+                text = raw.decode("utf-8", errors="replace")
+            except OSError:
+                continue
+
+            for m in _ENV_RE.finditer(text):
+                try:
+                    obj = json.loads(m.group(0))
+                except json.JSONDecodeError:
+                    continue
+                eid = obj.get("id")
+                if eid and eid not in seen_ids:
+                    seen_ids.add(eid)
+                    results.append(obj)
+
+    return results
+
+
+# ---------------------------------------------------------------------------
 # Data models (plain dicts, no external deps)
 # ---------------------------------------------------------------------------
 

@@ -1,4 +1,4 @@
-"""Export api_item dicts to Bruno collection format (.bru files)."""
+"""Export api_item dicts and environments to Bruno collection format (.bru files)."""
 
 import json
 import re
@@ -139,3 +139,42 @@ def export_bruno(
             seq += 1
 
     return coll_dir
+
+
+def export_environment_bruno(env: dict, collection_dir: Path) -> Path:
+    """
+    Write a Bruno environment file inside an existing collection's environments/ folder.
+    Bruno environments live at <collection>/environments/<name>.bru
+    """
+    env_id = env.get("id", "unknown")
+    variables = env.get("variables") or []
+
+    env_dir = collection_dir / "environments"
+    env_dir.mkdir(parents=True, exist_ok=True)
+
+    lines: list[str] = ["vars {"]
+    secret_names: list[str] = []
+
+    for var in variables:
+        name = var.get("name", "")
+        value = var.get("value") or var.get("initialValue") or ""
+        is_secret = var.get("securityType") == "secret"
+        if is_secret:
+            secret_names.append(name)
+            lines.append(f"  {name}:")  # secrets are listed but value goes in vars:secret
+        else:
+            # Escape newlines in values
+            value = str(value).replace("\n", "\\n")
+            lines.append(f"  {name}: {value}")
+
+    lines += ["}", ""]
+
+    if secret_names:
+        lines.append("vars:secret [")
+        for sn in secret_names:
+            lines.append(f"  {sn},")
+        lines += ["]", ""]
+
+    out_path = env_dir / f"environment-{env_id}.bru"
+    out_path.write_text("\n".join(lines), encoding="utf-8")
+    return out_path

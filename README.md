@@ -13,6 +13,7 @@ ApiDog stores a local cache of your projects even when cloud sync fails. This to
 | `data-storage-apiDetailTreeList.json` | Full project tree: folder structure, endpoint names, HTTP methods, URLs |
 | `Collections/*.postman_collection/` | Local collections with full headers, query params, and request bodies |
 | `IndexedDB/` (LevelDB) | Additional endpoints cached during recent sessions (best-effort) |
+| `Local Storage/` + `IndexedDB/` (LevelDB) | Environments with all variables and initial values |
 
 ---
 
@@ -92,10 +93,13 @@ uv run apidog-rescue --path "/custom/path/to/apidog"
 recovered/
 ├── postman/
 │   ├── my_project.postman_collection.json
-│   └── my_local_collection.postman_collection.json
+│   ├── my_local_collection.postman_collection.json
+│   └── environment-123.postman_environment.json
 └── bruno/
     ├── my_project/
     │   ├── bruno.json
+    │   ├── environments/
+    │   │   └── environment-123.bru
     │   ├── users/
     │   │   ├── get_user.bru
     │   │   └── create_user.bru
@@ -103,26 +107,29 @@ recovered/
     │       └── ...
     └── my_local_collection/
         ├── bruno.json
+        ├── environments/
+        │   └── environment-123.bru
         └── ...
 ```
 
 ### Importing into Postman
 
 1. Open Postman → **Import**
-2. **Upload Files** → select any `*.postman_collection.json` from `recovered/postman/`
-3. Done
+2. **Upload Files** → select all files from `recovered/postman/` (collections + environment)
+3. Done — the environment will be available in the environment switcher
 
 ### Importing into Bruno
 
 1. Open Bruno → **Open Collection**
 2. Navigate to `recovered/bruno/<collection-name>/`
-3. Done
+3. Done — environments are already inside the collection folder and will appear automatically
 
 ---
 
 ## Limitations
 
-- **Request bodies** are only recovered for endpoints that were stored in the local `Collections/` folder (ApiDog YAML format). Endpoints from the project tree JSON have method + URL only — bodies live in IndexedDB which requires a native LevelDB reader to fully decode.
+- **Request bodies** are only recovered for endpoints stored in the local `Collections/` folder (ApiDog YAML format). Endpoints from the project tree JSON have method + URL only — bodies live in IndexedDB which requires a native LevelDB reader to fully decode.
+- **Environment names** are not stored locally — exported environments are named by their internal ID. Rename them after import.
 - **Cloud-only projects** (never opened locally) cannot be recovered. Contact ApiDog support for those.
 - The IndexedDB extractor uses string-scanning heuristics — it may occasionally produce duplicate or partial entries.
 
